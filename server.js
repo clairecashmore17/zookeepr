@@ -1,5 +1,9 @@
 const express = require('express');
 const { animals } = require('./data/animals.json');
+
+//designating ports to use for heroku (AKA use 80 herokus or default to 3001)
+const PORT = process.nextTick.PORT || 3001;
+
 //begin express
 const app = express();
 
@@ -51,7 +55,7 @@ app.get('/api/animals', (req, res) => {
     res.json(results);
   });
 
-// make our server listen
-app.listen(3001, () => {
-    console.log(`API server now on port 3001!`);
+// make our server listen to our specified PORT
+app.listen(PORT, () => {
+    console.log(`API server now on port ${PORT}!`);
   });
