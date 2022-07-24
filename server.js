@@ -1,32 +1,19 @@
 const express = require('express');
 const { animals } = require('./data/animals');
 
-//designating ports to use for heroku (AKA use 80 herokus or default to 3001)
 const PORT = process.env.PORT || 3001;
-//begin express
 const app = express();
 
-//filter out our data to serve
 function filterByQuery(query, animalsArray) {
   let personalityTraitsArray = [];
-  //Note that we save the animalsArray as filteredResults here:
   let filteredResults = animalsArray;
-
-   //Here is where we deal with the multiple personality traits
   if (query.personalityTraits) {
-    //Save personalityTraits as a dedicated array
-        //If personalityTraits is a string, place it into a new array and save.
     if (typeof query.personalityTraits === 'string') {
       personalityTraitsArray = [query.personalityTraits];
     } else {
       personalityTraitsArray = query.personalityTraits;
     }
-    //Loop through each trait in the personalityTraits array:
     personalityTraitsArray.forEach(trait => {
-      //Check the trait against each animal in the filteredResults array.
-            //Remember, it is initially a copy of the animalsArray
-            //but here we're updating it for each trait .forEach() loop
-            // For each trait being targeted by the filter, the filteredResults array will then contain only the entries that contain the trait, so at the end we'll have an array of animals that have every one of the traits when the .forEach() loop is finished
       filteredResults = filteredResults.filter(
         animal => animal.personalityTraits.indexOf(trait) !== -1
       );
@@ -44,8 +31,11 @@ function filterByQuery(query, animalsArray) {
   return filteredResults;
 }
 
+function findById(id, animalsArray) {
+  const result = animalsArray.filter(animal => animal.id === id)[0];
+  return result;
+}
 
-//request data from the animals.json file
 app.get('/api/animals', (req, res) => {
   let results = animals;
   if (req.query) {
@@ -54,8 +44,15 @@ app.get('/api/animals', (req, res) => {
   res.json(results);
 });
 
+app.get('/api/animals/:id', (req, res) => {
+  const result = findById(req.params.id, animals);
+  if (result) {
+    res.json(result);
+  } else {
+    res.send(404);
+  }
+});
 
-// make our server listen to our specified PORT
 app.listen(PORT, () => {
   console.log(`API server now on port ${PORT}!`);
 });
