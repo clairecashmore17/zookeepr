@@ -2,7 +2,7 @@ const express = require('express');
 const { animals } = require('./data/animals.json');
 
 //designating ports to use for heroku (AKA use 80 herokus or default to 3001)
-const PORT = process.nextTick.PORT || 3001;
+const PORT = process.env.PORT || 3001;
 
 //begin express
 const app = express();
