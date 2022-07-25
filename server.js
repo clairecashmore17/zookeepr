@@ -6,16 +6,28 @@ const PORT = process.env.PORT || 3001;
 //creating our server with express
 const app = express();
 
-//app/use() mounts a function to the server that our requests will pass trhough before going to the endpoint
+//app.use() mounts a function to the server that our requests will pass trhough before going to the endpoint
 // These mounted functions are known as MIDDLEWARE
 
-//parse our incoming strnig or array data
-// express.urlencoded -> takes incoming POST data and converts it to key/value pairings that we can grab from req.body
-// extended: true -> informs our server that there may be a sub-array nested in the data
+/*
+- parse our incoming strnig or array data
+- express.urlencoded -> takes incoming POST data and converts it to key/value pairings that we can grab from req.body
+- extended: true -> informs our server that there may be a sub-array nested in the data
+
+*/
 app.use(express.urlencoded({ extended: true}));
 
 //parse incoming JSON data
 app.use(express.json());
+
+/* 
+-adding accessibility to our public folder in order to have access to style.css etc for the webpage without it being hidden behind an endpoint
+- This also means we dont have to individually create routes, can do an entire folder
+-THIS IS ADDING MIDDLEWARE
+- express.static -> we made thses fiels static resources, so it can now be accessed w/o having a specific server endpoint*/
+
+app.use(express.static('public'));
+
 
 function filterByQuery(query, animalsArray) {
     // we will save all the results into this personalityTraitsArray and then display these results
@@ -121,8 +133,40 @@ app.get('/api/animals/:id', (req,res) => {
     }
 })
 
+/* 
+    GET other html pages
+- notice the absence of /api in the /animals -> we do this to stay organized on what type of data is bring transferred at that endpoint
+- terms with api will deal with transferring JSON data, just /animals can deal with HTML pages
+*/
+app.get('/animals', (req,res) => {
+    res.sendFile(path.join(__dirname, './public/animals.html'));
+})
 
-/************/
+app.get('/zookeepers',(req,res) => {
+    res.sendFile(path.join(__dirname, './public/zookeepers.html'));
+})
+
+//WILDCARD ROUTES in case a user tries to navigate somewhere that doesnt exist on the server
+// WILDCARDS MUST ALWAYS BE LAST
+app.get('*', (req,res) => {
+    res.sendFile(path.join(__dirname, './public/index.html'));
+})
+
+/*
+- creating a route to our index.html page
+- the '/' route brings us to the root of the server, creates the homepage
+- This get only needs to respond with an HTML page, so we can use res.sendFile instead of json
+*/
+app.get('/', (req,res) => {
+    res.sendFile(path.join(__dirname, './public/index.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(`API server now on port ${PORT}!`);
+});
+
+
+
 
 /*************USER POPULATE DATA***********/
 // POST requests represent the action of a client requesting the server to accept data rather tahn vice versa
@@ -143,7 +187,3 @@ app.post('/api/animals', (req, res) => {
     }
 });
 
-
-app.listen(PORT, () => {
-  console.log(`API server now on port ${PORT}!`);
-});
