@@ -2,12 +2,23 @@ const express = require('express');
 const { animals } = require('./data/animals.json');
 const fs = require('fs');
 const path = require('path');
+const apiRoutes = require('./routes/apiRoutes');
+const htmlRoutes = require('./routes/htmlRoutes');
 const PORT = process.env.PORT || 3001;
 //creating our server with express
 const app = express();
 
 //app.use() mounts a function to the server that our requests will pass trhough before going to the endpoint
 // These mounted functions are known as MIDDLEWARE
+
+/* 
+-adding accessibility to our public folder in order to have access to style.css etc for the webpage without it being hidden behind an endpoint
+- This also means we dont have to individually create routes, can do an entire folder
+-THIS IS ADDING MIDDLEWARE
+- express.static -> we made thses fiels static resources, so it can now be accessed w/o having a specific server endpoint
+- this must be declared before the urlencoded and json
+*/
+app.use(express.static('public'));
 
 /*
 - parse our incoming strnig or array data
@@ -20,170 +31,22 @@ app.use(express.urlencoded({ extended: true}));
 //parse incoming JSON data
 app.use(express.json());
 
-/* 
--adding accessibility to our public folder in order to have access to style.css etc for the webpage without it being hidden behind an endpoint
-- This also means we dont have to individually create routes, can do an entire folder
--THIS IS ADDING MIDDLEWARE
-- express.static -> we made thses fiels static resources, so it can now be accessed w/o having a specific server endpoint*/
-
-app.use(express.static('public'));
-
-
-function filterByQuery(query, animalsArray) {
-    // we will save all the results into this personalityTraitsArray and then display these results
-  let personalityTraitsArray = [];
-  let filteredResults = animalsArray;
-  //dealing with multiple personality traits
-  if (query.personalityTraits) {
-    // If the personailty trait is a string, save it to a different array
-    if (typeof query.personalityTraits === 'string') {
-      personalityTraitsArray = [query.personalityTraits];
-    } else {
-      personalityTraitsArray = query.personalityTraits;
-    }
-    // go through each personality trait and filter 
-    personalityTraitsArray.forEach(trait => {
-      filteredResults = filteredResults.filter(
-        animal => animal.personalityTraits.indexOf(trait) !== -1
-      );
-    });
-  }
-  if (query.diet) {
-    filteredResults = filteredResults.filter(animal => animal.diet === query.diet);
-  }
-  if (query.species) {
-    filteredResults = filteredResults.filter(animal => animal.species === query.species);
-  }
-  if (query.name) {
-    filteredResults = filteredResults.filter(animal => animal.name === query.name);
-  }
-  return filteredResults;
-}
-
-//Function to find an animal by its id (USING THE REQ.PARAM)
-function findById( id, animalsArray) {
-    const result = animalsArray.filter(animal => animal.id === id)[0];
-    return result;
-}
-
-
-// function to handle the data from req.body
-function createNewAnimal(body, animalsArray) {
-    console.log(body);
-    const animal = body;
-    animalsArray.push(animal);
-    // Now we have to update our animals.json file
-    fs.writeFileSync(
-        //want to write animals.json file in the data subdirectory, so we join its path with __dirnmae which is  the directory of the file we execute code in
-        path.join(__dirname, './data/aniamls.json'),
-        JSON.stringify( {animals: animalsArray }, null, 2)
-        //null means we dont want to edit any of our data
-        // 2 indicates we want to create white space between our values for readability
-    );
-
-    return animal;
-
-   
-}
-
-//function to validate the POST data and ensure it has all the information necesarry to join our animals.json file
-function validateAnimal(animal) {
-    //if the user inputs something that isnt a string or nothing, wrong
-    if (!animal.name || typeof animal.name !== 'string') {
-        return false;
-    }
-    if(!animal.species || typeof animal.species !== 'string') {
-        return false;
-    }
-    if(!animal.diet || typeof animal.diet !== 'string') {
-        return false;
-    }
-    if(!animal.personalityTraits || !Array.isArray(animal.personalityTraits)) {
-        return false;
-    }
-    //if all is okay, return true
-    return true;
-
-}
-
-/********REQUEST AND RESPONSES*********/
-
-
-//This will return a LIST of animals, not a single
-app.get('/api/animals', (req, res) => {
-  let results = animals;
-  if (req.query) {
-    results = filterByQuery(req.query, results);
-  }
-  res.json(results);
-});
-
-// the req.aparams needs to be defined in the ROOT PATH
-//We will add :id to the end of our root path
-app.get('/api/animals/:id', (req,res) => {
-    
-    // passes in the req to return a SINGLE animal
-    const result = findById(req.params.id, animals)
-
-    // check to see if there is a result available
-    if(result) {
-    res.json(result);
-    } else {
-        res.send(404);
-    }
-})
-
-/* 
-    GET other html pages
-- notice the absence of /api in the /animals -> we do this to stay organized on what type of data is bring transferred at that endpoint
-- terms with api will deal with transferring JSON data, just /animals can deal with HTML pages
-*/
-app.get('/animals', (req,res) => {
-    res.sendFile(path.join(__dirname, './public/animals.html'));
-})
-
-app.get('/zookeepers',(req,res) => {
-    res.sendFile(path.join(__dirname, './public/zookeepers.html'));
-})
-
-//WILDCARD ROUTES in case a user tries to navigate somewhere that doesnt exist on the server
-// WILDCARDS MUST ALWAYS BE LAST
-app.get('*', (req,res) => {
-    res.sendFile(path.join(__dirname, './public/index.html'));
-})
-
 /*
-- creating a route to our index.html page
-- the '/' route brings us to the root of the server, creates the homepage
-- This get only needs to respond with an HTML page, so we can use res.sendFile instead of json
+- anytime client goes to host/api, app will use router we set up in apiRoutes
+- if they go to / then they will serve back our HTML routes
 */
-app.get('/', (req,res) => {
-    res.sendFile(path.join(__dirname, './public/index.html'));
-});
+app.use('/api', apiRoutes);
+app.use('/', htmlRoutes);
+
+
 
 app.listen(PORT, () => {
-  console.log(`API server now on port ${PORT}!`);
-});
+    console.log(`API server now on port ${PORT}!`);
+  });
 
 
 
 
-/*************USER POPULATE DATA***********/
-// POST requests represent the action of a client requesting the server to accept data rather tahn vice versa
-app.post('/api/animals', (req, res) => {
-    //req.body is where our incoming content will be
-    console.log(req.body);
-    // set id based on what the nxt index of the array will be
-    req.body.id = animals.length.toString();
 
-    //if any data in req.body is incorrect, send 400 error back
-    if(!validateAnimal(req.body)){
-        res.status(400).send('The animal is not properly formatted');
-    } else {
-        // add animal to json file and animals array in this function
-        const animal = createNewAnimal(req.body,animals);
 
-        res.json(animal);
-    }
-});
 
